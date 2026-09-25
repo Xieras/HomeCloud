@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Ошибка {{ e.code }}{% endblock %}
+{% block shell %}
+<div class="auth one"><section class="form"><div class="errbox">
+  <h1>{{ e.code }}</h1>
+  <p class="muted">{{ e.description }}</p>
+  <a class="btn" href="{{ url_for('files') }}">К файлам</a>
+</div></section></div>
+{% endblock %}

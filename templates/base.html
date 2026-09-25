@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{% block title %}{% endblock %} · {{ site }}</title>
+<link rel="icon" href="{{ url_for('static', filename='icon.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-csrf="{{ csrf_token() }}" {% block body_attrs %}{% endblock %}>
+{% block shell %}
+<div class="shell">
+  <aside class="side">
+    <a class="logo" href="{{ url_for('files') }}"><span class="mark">{{ ic('cloud') }}</span>{{ site }}</a>
+    <nav>
+      <a href="{{ url_for('files') }}" class="{{ 'on' if request.endpoint == 'files' }}">{{ ic('folder') }}Файлы</a>
+      {% if g.user.is_admin %}
+      <a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint == 'admin' }}">{{ ic('users') }}Доступы</a>
+      <a href="{{ url_for('admin_logs') }}" class="{{ 'on' if request.endpoint == 'admin_logs' }}">{{ ic('list') }}Журнал</a>
+      {% endif %}
+      <a href="{{ url_for('account') }}" class="{{ 'on' if request.endpoint == 'account' }}">{{ ic('key') }}Пароль</a>
+    </nav>
+    {% if disk %}
+    <div class="bay">
+      Диск: занято {{ disk.used|size }} из {{ disk.total|size }}
+      <progress value="{{ disk.pct }}" max="100"></progress>
+      Свободно {{ disk.free|size }}
+    </div>
+    {% endif %}
+    <div class="who">
+      <span>{{ g.user.email }}</span>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn sm ghost">{{ ic('logout') }}Выйти</button>
+      </form>
+    </div>
+  </aside>
+  <main>
+    {% for c, t in get_flashed_messages(with_categories=true) %}<div class="flash {{ c }}">{{ t }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+<dialog id="dlg">
+  <form method="dialog">
+    <h3 id="dlg-title"></h3>
+    <p id="dlg-text" class="muted"></p>
+    <input id="dlg-input" autocomplete="off">
+    <div class="row rev">
+      <button value="ok" id="dlg-ok" class="btn dark">OK</button>
+      <button value="cancel" class="btn">Отмена</button>
+    </div>
+  </form>
+</dialog>
+<div id="toast" class="toast" hidden></div>
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body>
+</html>

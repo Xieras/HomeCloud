@@ -1,0 +1,10 @@
+# /etc/fail2ban/jail.d/homecloud.local
+[homecloud]
+enabled  = true
+filter   = homecloud
+logpath  = /var/log/homecloud/auth.log
+port     = http,https
+maxretry = 5
+findtime = 15m
+bantime  = 2h
+banaction = nftables

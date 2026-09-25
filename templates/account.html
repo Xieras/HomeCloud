@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Пароль{% endblock %}
+{% block content %}
+<div class="head"><div><h1>Смена пароля</h1><p class="muted">{{ g.user.email }}</p></div></div>
+<form method="post" class="panel pad narrow stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label>Текущий пароль<input type="password" name="current" required autocomplete="current-password"></label>
+  <label>Новый пароль (от 8 символов)<input type="password" name="new" required minlength="8" autocomplete="new-password"></label>
+  <label>Повторите новый пароль<input type="password" name="repeat" required minlength="8" autocomplete="new-password"></label>
+  <div><button class="btn dark">Сохранить пароль</button></div>
+</form>
+{% endblock %}

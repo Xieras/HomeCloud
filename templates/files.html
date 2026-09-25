@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Файлы{% endblock %}
+{% block body_attrs %}data-path="{{ rel }}" data-write="{{ 1 if can_write else 0 }}"{% endblock %}
+{% block content %}
+<div class="head">
+  <div>
+    <h1>Файлы</h1>
+    <div class="crumbs">
+      <a href="{{ url_for('files') }}">Корень</a>
+      {% for n, p in crumbs %}<span>/</span><a href="{{ url_for('files', p=p) }}">{{ n }}</a>{% endfor %}
+    </div>
+  </div>
+  <div class="row">
+    {% if rel %}<a class="btn" href="{{ url_for('files', p=parent) }}">{{ ic('up') }}Наверх</a>{% endif %}
+    {% if can_write %}
+    <button class="btn" data-act="mkdir">{{ ic('plus') }}Новая папка</button>
+    <button class="btn dark" data-act="pick">{{ ic('upload') }}Загрузить</button>
+    <input type="file" id="pick" multiple hidden>
+    {% else %}<span class="badge b-warn">Только чтение</span>{% endif %}
+  </div>
+</div>
+
+<div id="up" class="panel pad upbox" hidden>
+  <div id="up-text" class="muted">Загрузка…</div>
+  <progress id="up-bar" value="0" max="100"></progress>
+</div>
+
+<div class="panel">
+  <div class="toolbar"><input id="filter" type="search" placeholder="Найти в этой папке" autocomplete="off"></div>
+  {% if items %}
+  <table class="files">
+    <thead><tr><th>Имя</th><th class="hide-s">Размер</th><th class="hide-s">Изменён</th><th></th></tr></thead>
+    <tbody>
+    {% for it in items %}
+      <tr data-n="{{ it.name|lower }}">
+        <td class="name">
+          {% if it.dir %}
+          <a href="{{ url_for('files', p=it.rel) }}"><span class="folder">{{ ic('folder') }}</span>{{ it.name }}</a>
+          {% else %}
+          <a href="{{ url_for('download', p=it.rel, inline=1) }}" target="_blank" rel="noopener"><span class="ext">{{ it.ext }}</span>{{ it.name }}</a>
+          {% endif %}
+        </td>
+        <td class="num hide-s">{{ '—' if it.dir else it.size|size }}</td>
+        <td class="num hide-s">{{ it.mtime }}</td>
+        <td class="acts">
+          {% if not it.dir %}<a class="icon" title="Скачать" href="{{ url_for('download', p=it.rel) }}">{{ ic('download') }}</a>{% endif %}
+          {% if can_write %}
+          <button class="icon" title="Переименовать" data-act="rename" data-path="{{ it.rel }}" data-name="{{ it.name }}">{{ ic('edit') }}</button>
+          <button class="icon danger" title="Удалить" data-act="delete" data-path="{{ it.rel }}" data-name="{{ it.name }}" data-dir="{{ 1 if it.dir else 0 }}">{{ ic('trash') }}</button>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <b>Здесь пока пусто</b>
+    <span class="muted">{% if can_write %}Перетащите файлы в окно или нажмите «Загрузить».{% else %}В этой папке нет файлов.{% endif %}</span>
+  </div>
+  {% endif %}
+</div>
+<div id="drop" class="drop">Отпустите, чтобы загрузить в /{{ rel }}</div>
+{% endblock %}

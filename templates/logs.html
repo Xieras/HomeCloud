@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Журнал{% endblock %}
+{% block content %}
+<div class="head"><div><h1>Журнал действий</h1><p class="muted">Все входы и операции с файлами. Записей: {{ total }}</p></div></div>
+<form method="get" class="panel pad filters">
+  <label>Поиск<input name="q" value="{{ q }}" placeholder="почта, файл или IP"></label>
+  <label>Событие
+    <select name="action"><option value="">Все</option>
+      {% for a in actions %}<option value="{{ a }}" {{ 'selected' if a == action }}>{{ label(a)[0] }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn dark">Применить</button>
+  <a class="btn" href="{{ url_for('admin_logs') }}">Сбросить</a>
+</form>
+<div class="panel">{% include "_logtable.html" %}</div>
+<div class="pager row">
+  {% if page > 1 %}<a class="btn sm" href="{{ url_for('admin_logs', q=q, action=action, page=page-1) }}">Новее</a>{% endif %}
+  <span class="muted">Страница {{ page }} из {{ pages }}</span>
+  {% if page < pages %}<a class="btn sm" href="{{ url_for('admin_logs', q=q, action=action, page=page+1) }}">Старее</a>{% endif %}
+</div>
+{% endblock %}

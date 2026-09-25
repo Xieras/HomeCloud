@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Доступы{% endblock %}
+{% block content %}
+<div class="head"><div><h1>Доступы</h1><p class="muted">Вы выдаёте почту и пароль — человек входит с ними и получает только назначенные права.</p></div></div>
+
+<div class="stats">
+  <div class="panel stat"><span>Аккаунтов</span><b>{{ stats.users }}</b></div>
+  <div class="panel stat"><span>Входов сегодня</span><b>{{ stats.logins }}</b></div>
+  <div class="panel stat"><span>Неудачных попыток</span><b>{{ stats.fails }}</b></div>
+  <div class="panel stat"><span>Действий с файлами</span><b>{{ stats.actions }}</b></div>
+</div>
+
+<section class="panel pad sect">
+  <h2>Выдать доступ</h2>
+  <form method="post" action="{{ url_for('admin_create') }}" class="ugrid create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Почта<input type="email" name="email" required autocomplete="off"></label>
+    <label>Пароль
+      <span class="pw"><input name="password" minlength="8" required autocomplete="off"><button type="button" class="btn" data-gen title="Сгенерировать">{{ ic('key') }}</button></span>
+    </label>
+    <label>Права
+      <select name="perm">
+        <option value="read">Только чтение</option>
+        <option value="write">Чтение и изменение</option>
+      </select>
+    </label>
+    <label>Своя папка
+      <input name="root" placeholder="пусто — всё хранилище" autocomplete="off">
+    </label>
+    <button class="btn dark">Выдать доступ</button>
+  </form>
+  <p class="muted small">«Чтение» — просмотр и скачивание. «Изменение» — ещё и загрузка, переименование, удаление. Если указана папка, человек не видит ничего за её пределами.</p>
+</section>
+
+<section class="panel sect">
+  <h2 class="pad">Аккаунты</h2>
+  {% for u in users %}
+  <div class="user">
+    <div class="row between">
+      <div>
+        <b>{{ u.email }}</b>
+        {% if u.is_admin %}<span class="badge b-info">Администратор</span>
+        {% elif not u.active %}<span class="badge b-bad">Отключён</span>{% endif %}
+        <div class="muted small">Создан {{ u.created_at }} · последний вход: {{ u.last_login or 'ещё не входил' }}</div>
+      </div>
+    </div>
+    {% if not u.is_admin %}
+    <form method="post" action="{{ url_for('admin_update', uid=u.id) }}" class="ugrid edit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Права
+        <select name="perm">
+          <option value="read" {{ 'selected' if u.perm == 'read' }}>Только чтение</option>
+          <option value="write" {{ 'selected' if u.perm == 'write' }}>Чтение и изменение</option>
+        </select>
+      </label>
+      <label>Своя папка<input name="root" value="{{ u.root }}" placeholder="всё хранилище"></label>
+      <label class="check"><input type="checkbox" name="active" {{ 'checked' if u.active }}>Доступ включён</label>
+      <button class="btn">Сохранить</button>
+    </form>
+    <div class="ugrid tools">
+      <form method="post" action="{{ url_for('admin_password', uid=u.id) }}" class="pwform">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <span class="pw"><input name="password" minlength="8" placeholder="Новый пароль" required autocomplete="off"><button type="button" class="btn" data-gen title="Сгенерировать">{{ ic('key') }}</button></span>
+        <button class="btn">Сменить пароль</button>
+      </form>
+      <form method="post" action="{{ url_for('admin_delete', uid=u.id) }}" data-confirm="Удалить доступ {{ u.email }}? Файлы останутся на диске.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn danger">{{ ic('trash') }}Удалить доступ</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+<section class="sect">
+  <div class="row between"><h2>Последние события</h2><a class="btn sm" href="{{ url_for('admin_logs') }}">Весь журнал</a></div>
+  <div class="panel">{% include "_logtable.html" %}</div>
+</section>
+{% endblock %}

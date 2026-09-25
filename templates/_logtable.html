@@ -1,0 +1,19 @@
+<div class="tablewrap">
+<table class="log">
+  <thead><tr><th>Время</th><th>Пользователь</th><th>Событие</th><th>Подробности</th><th>IP</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    {% set l = label(r.action) %}
+    <tr>
+      <td class="num">{{ r.ts }}</td>
+      <td>{{ r.email }}</td>
+      <td><span class="badge {{ 'b-' ~ l[1] if l[1] }}">{{ l[0] }}</span></td>
+      <td class="detail">{{ r.detail }}</td>
+      <td class="num mono">{{ r.ip }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">Записей нет</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block shell %}
+<div class="auth">
+  <section class="brand">
+    <a class="logo" href="{{ url_for('login') }}"><span class="mark">{{ ic('cloud') }}</span>{{ site }}</a>
+    <div>
+      <h2>Личное хранилище на домашнем сервере</h2>
+      <p>Доступ выдаёт администратор. Если у вас нет почты и пароля — обратитесь к нему.</p>
+    </div>
+    <div class="bays"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+  </section>
+  <section class="form">
+    <form method="post" action="{{ url_for('login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h1>Вход</h1>
+      {% for c, t in get_flashed_messages(with_categories=true) %}<div class="flash {{ c }}">{{ t }}</div>{% endfor %}
+      <label>Почта<input type="email" name="email" required autofocus autocomplete="username"></label>
+      <label>Пароль<input type="password" name="password" required autocomplete="current-password"></label>
+      <button class="btn dark wide">Войти</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

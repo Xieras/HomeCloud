@@ -1,0 +1,23 @@
+[Unit]
+Description=HomeCloud file storage
+After=network.target
+
+[Service]
+User=homecloud
+Group=homecloud
+WorkingDirectory=/opt/homecloud
+EnvironmentFile=/opt/homecloud/.env
+Environment=TMPDIR=/srv/tmp-uploads
+ExecStart=/opt/homecloud/venv/bin/gunicorn -k gthread -w 2 --threads 8 --timeout 3600 -b 127.0.0.1:8000 app:app
+Restart=on-failure
+RestartSec=3
+
+# Изоляция: сервис пишет только в свои каталоги
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/storage /srv/tmp-uploads /var/lib/homecloud /var/log/homecloud
+
+[Install]
+WantedBy=multi-user.target
