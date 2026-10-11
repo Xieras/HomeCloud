@@ -90,6 +90,12 @@ tr:last-child td{border-bottom:0}
 .detail{word-break:break-word;color:#2b3740} .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
 .pager{margin-top:14px}
 
+/* сохранённые адреса */
+.sgrid{display:grid;grid-template-columns:1fr 1.6fr auto auto;gap:12px;align-items:end}
+.srv .row.between{align-items:flex-start;gap:12px} .srv form{margin:0}
+.edit-srv{margin-top:10px} .edit-srv summary{cursor:pointer;display:inline-block} .edit-srv .sgrid{margin-top:10px}
+.srv .mono{word-break:break-all}
+
 /* вход */
 .auth{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .auth.one{grid-template-columns:1fr}
@@ -111,7 +117,7 @@ dialog input{margin-top:10px}
 .toast{position:fixed;right:20px;bottom:20px;z-index:60;padding:11px 16px;border-radius:var(--r);background:var(--ink);color:#fff;max-width:min(380px,90vw);border-left:4px solid var(--amber)}
 .toast.err{border-left-color:#ff6b6b}
 
-@media(max-width:1000px){.ugrid{grid-template-columns:1fr 1fr}.user .edit{grid-template-columns:1fr 1fr}.create button{grid-column:1/-1}}
+@media(max-width:1000px){.sgrid{grid-template-columns:1fr 1fr}.ugrid{grid-template-columns:1fr 1fr}.user .edit{grid-template-columns:1fr 1fr}.create button{grid-column:1/-1}}
 @media(max-width:860px){
  .shell{grid-template-columns:1fr}
  .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px 14px;gap:10px 16px}

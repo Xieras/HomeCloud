@@ -15,6 +15,7 @@
     <a class="logo" href="{{ url_for('files') }}"><span class="mark">{{ ic('cloud') }}</span>{{ site }}</a>
     <nav>
       <a href="{{ url_for('files') }}" class="{{ 'on' if request.endpoint == 'files' }}">{{ ic('folder') }}Файлы</a>
+      <a href="{{ url_for('servers') }}" class="{{ 'on' if request.endpoint == 'servers' }}">{{ ic('server') }}Хранилища</a>
       {% if g.user.is_admin %}
       <a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint == 'admin' }}">{{ ic('users') }}Доступы</a>
       <a href="{{ url_for('admin_logs') }}" class="{{ 'on' if request.endpoint == 'admin_logs' }}">{{ ic('list') }}Журнал</a>

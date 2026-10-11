@@ -16,7 +16,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv nginx ufw
 echo "==> Пользователь и каталоги"
 id homecloud &>/dev/null || useradd --system --home-dir "$APP" --shell /usr/sbin/nologin homecloud
 mkdir -p "$APP" /srv/storage /srv/tmp-uploads /var/lib/homecloud /var/log/homecloud
-rsync -a --exclude deploy --exclude venv --exclude .env --exclude __pycache__ "$SRC"/ "$APP"/
+rsync -a --exclude deploy --exclude /windows --exclude venv --exclude .env --exclude __pycache__ "$SRC"/ "$APP"/
 
 if [ ! -f "$APP/.env" ]; then
   cp "$SRC/.env.example" "$APP/.env"

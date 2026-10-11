@@ -72,6 +72,8 @@
         if (ok) call("/delete", { p: path });
       }
     }
+    const f = e.target.closest("[data-fill]");
+    if (f) { const t = $(f.dataset.target); if (t) { t.value = f.dataset.fill; t.focus(); } }
     const g = e.target.closest("[data-gen]");
     if (g) {
       const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";

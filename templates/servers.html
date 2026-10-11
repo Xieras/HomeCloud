@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Хранилища{% endblock %}
+{% block content %}
+<div class="head"><div><h1>Хранилища</h1><p class="muted">Сохраните IP-адрес или домен хранилища — потом его можно открыть одной кнопкой. Список виден только вам.</p></div></div>
+
+<section class="panel pad">
+  <h2>Добавить адрес</h2>
+  <form method="post" action="{{ url_for('servers_add') }}" class="sgrid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Название<input name="name" maxlength="60" placeholder="например, Дом" autocomplete="off"></label>
+    <label>IP-адрес или домен
+      <input name="address" required maxlength="200" placeholder="192.168.1.50 или cloud.example.com:8080" autocomplete="off" spellcheck="false" id="addr">
+    </label>
+    <label class="check"><input type="checkbox" name="https">HTTPS</label>
+    <button class="btn dark">{{ ic('plus') }}Сохранить</button>
+  </form>
+  <p class="muted small">Порт указывайте через двоеточие, если он не стандартный. Если схема не указана, используется http — либо https, когда отмечено «HTTPS».
+    <button type="button" class="btn sm" data-fill="{{ request.host_url }}" data-target="#addr">Подставить адрес этого сайта</button></p>
+</section>
+
+<section class="panel sect">
+  <h2 class="pad">Сохранённые адреса</h2>
+  {% for r in rows %}
+  <div class="user srv">
+    <div class="row between">
+      <div>
+        <b>{{ r.name }}</b>
+        {% if r.is_main %}<span class="badge b-info">Основной</span>{% endif %}
+        <div class="muted small mono">{{ r.url }}</div>
+      </div>
+      <div class="row">
+        <a class="btn dark sm" href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ ic('open') }}Открыть</a>
+        {% if not r.is_main %}
+        <form method="post" action="{{ url_for('servers_main', sid=r.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn sm">{{ ic('star') }}Сделать основным</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('servers_delete', sid=r.id) }}" data-confirm="Удалить сохранённый адрес «{{ r.name }}»?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn sm danger">{{ ic('trash') }}Удалить</button>
+        </form>
+      </div>
+    </div>
+    <details class="edit-srv">
+      <summary class="muted small">Изменить</summary>
+      <form method="post" action="{{ url_for('servers_update', sid=r.id) }}" class="sgrid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Название<input name="name" value="{{ r.name }}" maxlength="60" autocomplete="off"></label>
+        <label>IP-адрес или домен<input name="address" value="{{ r.url }}" required maxlength="200" autocomplete="off" spellcheck="false"></label>
+        <span></span>
+        <button class="btn">{{ ic('edit') }}Сохранить</button>
+      </form>
+    </details>
+  </div>
+  {% else %}
+  <div class="empty"><b>Пока ничего не сохранено</b><span class="muted">Добавьте первый адрес в форме выше.</span></div>
+  {% endfor %}
+</section>
+
+{% if installer %}
+<section class="panel pad sect">
+  <h2>Программа для Windows</h2>
+  <p class="muted">HomeCloud Connect хранит те же адреса на вашем компьютере и открывает хранилище в браузере. Устанавливается без прав администратора.</p>
+  <p><a class="btn dark" href="{{ url_for('static', filename='downloads/HomeCloudConnect-Setup.exe') }}" download>{{ ic('download') }}Скачать установщик</a></p>
+</section>
+{% endif %}
+{% endblock %}

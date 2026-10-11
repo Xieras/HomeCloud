@@ -1,8 +1,9 @@
 """HomeCloud — личное файловое хранилище (Flask + SQLite)."""
-import hashlib, logging, mimetypes, os, re, secrets, shutil, sqlite3
+import hashlib, ipaddress, logging, mimetypes, os, re, secrets, shutil, sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import click
 from dotenv import load_dotenv
@@ -54,6 +55,10 @@ CREATE TABLE IF NOT EXISTS logs(
   id INTEGER PRIMARY KEY, ts TEXT NOT NULL, email TEXT, action TEXT NOT NULL,
   detail TEXT, ip TEXT);
 CREATE INDEX IF NOT EXISTS logs_ts ON logs(ts);
+CREATE TABLE IF NOT EXISTS servers(
+  id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, name TEXT NOT NULL, url TEXT NOT NULL,
+  is_main INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS servers_user ON servers(user_id);
 """
 
 
@@ -113,6 +118,9 @@ ICONS = {
     "list": '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
     "key": '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9m-3 3l3 3"/>',
     "up": '<path d="M9 14l-4-4 4-4M5 10h9a5 5 0 0 1 5 5v3"/>',
+    "server": '<rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/>',
+    "open": '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    "star": '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
 }
 
 
@@ -136,6 +144,7 @@ LABELS = {
     "user_create": ("Выдан доступ", "warn"), "user_update": ("Права изменены", "warn"),
     "user_delete": ("Доступ удалён", "bad"), "pw_change": ("Смена пароля", "warn"),
     "pw_reset": ("Сброс пароля", "warn"),
+    "server_add": ("Сохранён адрес", "info"), "server_delete": ("Адрес удалён", ""),
 }
 
 
@@ -448,6 +457,131 @@ def delete():
     return jsonify(ok=True)
 
 
+# --- сохранённые адреса хранилищ ----------------------------------------------
+MAX_SERVERS = 30
+HOST_RE = re.compile(r"^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$")
+PATH_RE = re.compile(r"^[A-Za-z0-9._~%/-]*$")
+DEFAULT_PORT = {"http": 80, "https": 443}
+INSTALLER = Path(app.root_path) / "static" / "downloads" / "HomeCloudConnect-Setup.exe"
+ADDR_HELP = "Адрес указан неверно. Примеры: 192.168.1.50, 192.168.1.50:8080, cloud.example.com"
+
+
+def normalize_server(raw, https=False):
+    """Приводит адрес к виду схема://хост[:порт][/путь]. Допустимы только http и https."""
+    s = (raw or "").strip()
+    if not s:
+        raise ValueError("Введите адрес хранилища.")
+    if "://" not in s:
+        s = ("https://" if https else "http://") + s
+    try:
+        u = urlsplit(s)
+        host, port = u.hostname, u.port
+    except ValueError:
+        raise ValueError(ADDR_HELP)
+    if u.scheme not in ("http", "https") or not host or u.username or u.password:
+        raise ValueError(ADDR_HELP)
+    try:
+        ip = ipaddress.ip_address(host)
+        host = f"[{ip}]" if ip.version == 6 else str(ip)
+    except ValueError:
+        if not HOST_RE.match(host):
+            raise ValueError(ADDR_HELP)
+    path = u.path.rstrip("/")
+    if not PATH_RE.match(path):
+        raise ValueError(ADDR_HELP)
+    if port == DEFAULT_PORT[u.scheme]:
+        port = None
+    return f"{u.scheme}://{host}{f':{port}' if port else ''}{path}"
+
+
+def server_name(raw, url):
+    name = re.sub(r"[\x00-\x1f\x7f]", "", (raw or "")).strip()[:60]
+    return name or urlsplit(url).hostname
+
+
+def my_server(sid):
+    r = db().execute("SELECT * FROM servers WHERE id=? AND user_id=?", (sid, g.user["id"])).fetchone()
+    if not r:
+        abort(404)
+    return r
+
+
+@app.get("/servers")
+@login_required
+def servers():
+    rows = db().execute("SELECT * FROM servers WHERE user_id=? ORDER BY is_main DESC, name COLLATE NOCASE",
+                        (g.user["id"],)).fetchall()
+    return render_template("servers.html", rows=rows, installer=INSTALLER.is_file(), max_servers=MAX_SERVERS)
+
+
+@app.post("/servers")
+@login_required
+def servers_add():
+    uid = g.user["id"]
+    try:
+        url = normalize_server(request.form.get("address"), bool(request.form.get("https")))
+    except ValueError as e:
+        flash(str(e), "err")
+        return redirect(url_for("servers"))
+    if db().execute("SELECT COUNT(*) FROM servers WHERE user_id=?", (uid,)).fetchone()[0] >= MAX_SERVERS:
+        flash(f"Можно сохранить не больше {MAX_SERVERS} адресов.", "err")
+    elif db().execute("SELECT 1 FROM servers WHERE user_id=? AND url=?", (uid, url)).fetchone():
+        flash("Такой адрес уже сохранён.", "err")
+    else:
+        first = not db().execute("SELECT 1 FROM servers WHERE user_id=?", (uid,)).fetchone()
+        db().execute("INSERT INTO servers(user_id,name,url,is_main,created_at) VALUES(?,?,?,?,?)",
+                     (uid, server_name(request.form.get("name"), url), url, 1 if first else 0, now()))
+        db().commit()
+        log("server_add", url)
+        flash("Адрес сохранён.", "ok")
+    return redirect(url_for("servers"))
+
+
+@app.post("/servers/<int:sid>/update")
+@login_required
+def servers_update(sid):
+    row = my_server(sid)
+    try:
+        url = normalize_server(request.form.get("address"), bool(request.form.get("https")))
+    except ValueError as e:
+        flash(str(e), "err")
+        return redirect(url_for("servers"))
+    if db().execute("SELECT 1 FROM servers WHERE user_id=? AND url=? AND id<>?",
+                    (g.user["id"], url, sid)).fetchone():
+        flash("Такой адрес уже сохранён.", "err")
+    else:
+        db().execute("UPDATE servers SET name=?, url=? WHERE id=?",
+                     (server_name(request.form.get("name"), url), url, row["id"]))
+        db().commit()
+        flash("Изменения сохранены.", "ok")
+    return redirect(url_for("servers"))
+
+
+@app.post("/servers/<int:sid>/main")
+@login_required
+def servers_main(sid):
+    row = my_server(sid)
+    db().execute("UPDATE servers SET is_main=0 WHERE user_id=?", (g.user["id"],))
+    db().execute("UPDATE servers SET is_main=1 WHERE id=?", (row["id"],))
+    db().commit()
+    flash("Основной адрес изменён.", "ok")
+    return redirect(url_for("servers"))
+
+
+@app.post("/servers/<int:sid>/delete")
+@login_required
+def servers_delete(sid):
+    row = my_server(sid)
+    db().execute("DELETE FROM servers WHERE id=?", (row["id"],))
+    if row["is_main"]:
+        db().execute("UPDATE servers SET is_main=1 WHERE id=(SELECT MIN(id) FROM servers WHERE user_id=?)",
+                     (g.user["id"],))
+    db().commit()
+    log("server_delete", row["url"])
+    flash("Адрес удалён.", "ok")
+    return redirect(url_for("servers"))
+
+
 # --- админ-панель -----------------------------------------------------------
 @app.get("/admin")
 @admin_required
@@ -528,6 +662,7 @@ def admin_password(uid):
 @admin_required
 def admin_delete(uid):
     u = target(uid)
+    db().execute("DELETE FROM servers WHERE user_id=?", (uid,))
     db().execute("DELETE FROM users WHERE id=?", (uid,))
     db().commit()
     log("user_delete", u["email"])
